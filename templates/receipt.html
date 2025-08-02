@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Sale Receipt{% endblock %}
+
+{% block content %}
+<div class="container mt-5" id="receipt-area">
+    <div class="card">
+        <div class="card-header text-center">
+            <h3 class="mb-0">Sale Receipt</h3>
+        </div>
+        <div class="card-body">
+            <p><strong>Date:</strong> {{ sale.sale_date.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+            <p><strong>Customer:</strong> {{ sale.customer_name or 'Walk-in' }}</p>
+            <hr>
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Unit Price</th>
+                        <th>Quantity</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>{{ sale.product.name }}</td>
+                        <td>{{ format_currency(sale.product.price) }}</td>
+                        <td>{{ sale.quantity }}</td>
+                        <td>{{ format_currency(sale.total_amount) }}</td>
+                    </tr>
+                </tbody>
+            </table>
+            <hr>
+            <h4 class="text-end">Grand Total: <span class="text-success">{{ format_currency(sale.total_amount) }}</span></h4>
+        </div>
+    </div>
+    <div class="text-center mt-3">
+        <a href="{{ url_for('sales') }}" class="btn btn-secondary">Back to Sales</a>
+        <button class="btn btn-primary" onclick="window.print()"><i class="fas fa-print me-1"></i>Print</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+window.onload = function() {
+    window.print();
+};
+</script>
+{% endblock %} 

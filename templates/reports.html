@@ -1,0 +1,290 @@
+{% extends "base.html" %}
+
+{% block title %}Reports - Inventory Management System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">
+        <i class="fas fa-chart-bar me-2"></i>Business Reports
+    </h1>
+    <div>
+        <button class="btn btn-outline-primary me-2" onclick="window.print()">
+            <i class="fas fa-print me-1"></i>Print Report
+        </button>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+        </a>
+    </div>
+</div>
+
+<!-- Report Summary -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card metric-card">
+            <div class="card-body text-center">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3 class="mb-0">{{ total_sales_30d }}</h3>
+                        <p class="mb-0 opacity-75">Sales (30 days)</p>
+                    </div>
+                    <div class="fs-1">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card metric-card success">
+            <div class="card-body text-center">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3 class="mb-0">₹{{ "%.2f"|format(total_revenue_30d) }}</h3>
+                        <p class="mb-0 opacity-75">Revenue (30 days)</p>
+                    </div>
+                    <div class="fs-1">
+                        <i class="fas fa-dollar-sign"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card metric-card">
+            <div class="card-body text-center">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3 class="mb-0">₹{{ "%.2f"|format(total_profit_30d) }}</h3>
+                        <p class="mb-0 opacity-75">Total Profit (30 days)</p>
+                    </div>
+                    <div class="fs-1">
+                        <i class="fas fa-coins"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card metric-card">
+            <div class="card-body text-center">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3 class="mb-0">{{ recent_sales|length }}</h3>
+                        <p class="mb-0 opacity-75">Recent Transactions</p>
+                    </div>
+                    <div class="fs-1">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Top Selling Products -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-trophy text-warning me-2"></i>Top Selling Products
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if top_products %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Units Sold</th>
+                                    <th>Revenue</th>
+                                    <th>Performance</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for product in top_products %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ product.name }}</strong>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ product.total_sold }}</span>
+                                    </td>
+                                    <td>₹{{ "%.2f"|format(product.total_revenue) }}</td>
+                                    <td>
+                                        {% if loop.index == 1 %}
+                                            <i class="fas fa-medal text-warning"></i> Best
+                                        {% elif loop.index == 2 %}
+                                            <i class="fas fa-medal text-secondary"></i> 2nd
+                                        {% elif loop.index == 3 %}
+                                            <i class="fas fa-medal text-bronze"></i> 3rd
+                                        {% else %}
+                                            <span class="text-muted">Good</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-chart-bar fs-1 mb-3"></i>
+                        <p class="mb-0">No sales data available for analysis.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Sales Activity -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-history text-info me-2"></i>Recent Sales Activity
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if recent_sales %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Product</th>
+                                    <th>Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for sale in recent_sales[:10] %}
+                                <tr>
+                                    <td>
+                                        <small>{{ sale.sale_date.strftime('%m/%d') }}</small>
+                                    </td>
+                                    <td>
+                                        <small>{{ sale.product.name[:20] }}{% if sale.product.name|length > 20 %}...{% endif %}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-success">₹{{ "%.2f"|format(sale.total_amount) }}</span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-clock fs-1 mb-3"></i>
+                        <p class="mb-0">No recent sales activity.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Business Insights -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-lightbulb text-warning me-2"></i>Business Insights
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <i class="fas fa-trending-up fs-1 text-success mb-3"></i>
+                                <h6>Sales Performance</h6>
+                                {% if total_sales_30d > 0 %}
+                                    <p class="mb-0">Good sales activity in the last 30 days</p>
+                                {% else %}
+                                    <p class="mb-0">Consider promotional activities</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <i class="fas fa-boxes fs-1 text-primary mb-3"></i>
+                                <h6>Inventory Management</h6>
+                                <p class="mb-0">Monitor stock levels regularly</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <i class="fas fa-chart-pie fs-1 text-info mb-3"></i>
+                                <h6>Revenue Analysis</h6>
+                                {% if total_revenue_30d > 0 %}
+                                    <p class="mb-0">Strong revenue generation</p>
+                                {% else %}
+                                    <p class="mb-0">Focus on sales strategies</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recommendations -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-bullseye text-danger me-2"></i>Recommendations
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-check-circle text-success me-2"></i>What's Working Well</h6>
+                        <ul class="list-unstyled">
+                            {% if total_sales_30d > 0 %}
+                                <li><i class="fas fa-arrow-right text-success me-2"></i>Consistent sales activity</li>
+                            {% endif %}
+                            {% if top_products %}
+                                <li><i class="fas fa-arrow-right text-success me-2"></i>Strong product performance</li>
+                            {% endif %}
+                            <li><i class="fas fa-arrow-right text-success me-2"></i>Effective inventory tracking</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-exclamation-triangle text-warning me-2"></i>Areas for Improvement</h6>
+                        <ul class="list-unstyled">
+                            {% if total_sales_30d == 0 %}
+                                <li><i class="fas fa-arrow-right text-warning me-2"></i>Increase sales activities</li>
+                            {% endif %}
+                            <li><i class="fas fa-arrow-right text-warning me-2"></i>Monitor low stock items</li>
+                            <li><i class="fas fa-arrow-right text-warning me-2"></i>Consider customer feedback</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Print Styles -->
+<style media="print">
+    .btn, .navbar, .sidebar { display: none !important; }
+    .card { border: 1px solid #000 !important; }
+    .metric-card { background: #f8f9fa !important; color: #000 !important; }
+</style>
+{% endblock %} 

@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+
+{% block title %}Products - Inventory Management System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">
+        <i class="fas fa-box me-2"></i>Products
+    </h1>
+    <a href="{{ url_for('add_product') }}" class="btn btn-primary">
+        <i class="fas fa-plus me-1"></i>Add Product
+    </a>
+</div>
+
+<!-- Search and Filter -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <input type="text" id="searchInput" class="form-control" placeholder="Search products...">
+            </div>
+            <div class="col-md-3 mb-3">
+                <select id="categoryFilter" class="form-select">
+                    <option value="">All Categories</option>
+                    <option value="Electronics">Electronics</option>
+                    <option value="Clothing">Clothing</option>
+                    <option value="Food">Food</option>
+                    <option value="Books">Books</option>
+                    <option value="Home">Home & Garden</option>
+                    <option value="Sports">Sports</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            <div class="col-md-3 mb-3">
+                <select id="stockFilter" class="form-select">
+                    <option value="">All Stock Levels</option>
+                    <option value="low">Low Stock</option>
+                    <option value="out">Out of Stock</option>
+                    <option value="available">In Stock</option>
+                </select>
+            </div>
+            <div class="col-md-2 mb-3">
+                <button id="clearFilters" class="btn btn-outline-secondary w-100">
+                    <i class="fas fa-times me-1"></i>Clear
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Products Table -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+            <i class="fas fa-list me-2"></i>Product List
+        </h5>
+        <span class="badge bg-primary" id="productCount">{{ products|length }} Products</span>
+    </div>
+    <div class="card-body">
+        {% if products %}
+            <div class="table-responsive">
+                <table class="table table-hover" id="productsTable">
+                    <thead>
+                        <tr>
+                            <th>Product Name</th>
+                            <th>Category</th>
+                            <th>Price</th>
+                            <th>Cost</th>
+                            <th>Stock</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in products %}
+                        <tr data-category="{{ product.category }}" data-stock="{{ product.stock_quantity }}">
+                            <td>
+                                <div>
+                                    <strong>{{ product.name }}</strong>
+                                    {% if product.description %}
+                                        <br><small class="text-muted">{{ product.description[:50] }}{% if product.description|length > 50 %}...{% endif %}</small>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                {% if product.category %}
+                                    <span class="badge bg-secondary">{{ product.category }}</span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <strong>₹{{ "%.2f"|format(product.price) }}</strong>
+                            </td>
+                            <td>₹{{ "%.2f"|format(product.cost) }}</td>
+                            <td>
+                                {% if product.stock_quantity <= product.min_stock_level %}
+                                    <span class="badge bg-danger">{{ product.stock_quantity }}</span>
+                                {% elif product.stock_quantity == 0 %}
+                                    <span class="badge bg-secondary">{{ product.stock_quantity }}</span>
+                                {% else %}
+                                    <span class="badge bg-success">{{ product.stock_quantity }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if product.stock_quantity == 0 %}
+                                    <span class="badge bg-secondary">Out of Stock</span>
+                                {% elif product.stock_quantity <= product.min_stock_level %}
+                                    <span class="badge bg-warning">Low Stock</span>
+                                {% else %}
+                                    <span class="badge bg-success">In Stock</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a href="{{ url_for('edit_product', id=product.id) }}" class="btn btn-sm btn-outline-primary" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{{ url_for('add_sale') }}?product_id={{ product.id }}" class="btn btn-sm btn-outline-success" title="Sell">
+                                        <i class="fas fa-shopping-cart"></i>
+                                    </a>
+                                                                         <button type="button" class="btn btn-sm btn-outline-danger" title="Delete" 
+                                             data-product-id="{{ product.id }}" data-product-name="{{ product.name }}">
+                                         <i class="fas fa-trash"></i>
+                                     </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center text-muted py-5">
+                <i class="fas fa-box-open fs-1 mb-3"></i>
+                <h5>No Products Found</h5>
+                <p class="mb-3">Get started by adding your first product to the inventory.</p>
+                <a href="{{ url_for('add_product') }}" class="btn btn-primary">
+                    <i class="fas fa-plus me-1"></i>Add Your First Product
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete <strong id="productNameToDelete"></strong>?</p>
+                <p class="text-danger"><small>This action cannot be undone.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <a href="#" id="confirmDeleteBtn" class="btn btn-danger">Delete</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Search and filter functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+    const categoryFilter = document.getElementById('categoryFilter');
+    const stockFilter = document.getElementById('stockFilter');
+    const clearFilters = document.getElementById('clearFilters');
+    const productCount = document.getElementById('productCount');
+    const tableRows = document.querySelectorAll('#productsTable tbody tr');
+
+    function filterProducts() {
+        const searchTerm = searchInput.value.toLowerCase();
+        const categoryValue = categoryFilter.value;
+        const stockValue = stockFilter.value;
+        let visibleCount = 0;
+
+        tableRows.forEach(row => {
+            const productName = row.cells[0].textContent.toLowerCase();
+            const category = row.getAttribute('data-category');
+            const stock = parseInt(row.getAttribute('data-stock'));
+            
+            let showRow = true;
+
+            // Search filter
+            if (searchTerm && !productName.includes(searchTerm)) {
+                showRow = false;
+            }
+
+            // Category filter
+            if (categoryValue && category !== categoryValue) {
+                showRow = false;
+            }
+
+            // Stock filter
+            if (stockValue) {
+                if (stockValue === 'low' && stock > 5) {
+                    showRow = false;
+                } else if (stockValue === 'out' && stock > 0) {
+                    showRow = false;
+                } else if (stockValue === 'available' && stock <= 5) {
+                    showRow = false;
+                }
+            }
+
+            if (showRow) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        productCount.textContent = `${visibleCount} Products`;
+    }
+
+    searchInput.addEventListener('input', filterProducts);
+    categoryFilter.addEventListener('change', filterProducts);
+    stockFilter.addEventListener('change', filterProducts);
+
+    clearFilters.addEventListener('click', function() {
+        searchInput.value = '';
+        categoryFilter.value = '';
+        stockFilter.value = '';
+        filterProducts();
+    });
+});
+
+// Delete confirmation
+function confirmDelete(productId, productName) {
+    document.getElementById('productNameToDelete').textContent = productName;
+    document.getElementById('confirmDeleteBtn').href = `/products/delete/${productId}`;
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+
+// Add event listeners for delete buttons
+document.addEventListener('DOMContentLoaded', function() {
+    const deleteButtons = document.querySelectorAll('[data-product-id]');
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const productId = this.getAttribute('data-product-id');
+            const productName = this.getAttribute('data-product-name');
+            confirmDelete(productId, productName);
+        });
+    });
+});
+</script>
+{% endblock %} 

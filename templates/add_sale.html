@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+
+{% block title %}Record Sale - Inventory Management System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">
+        <i class="fas fa-plus me-2"></i>Record Sale
+    </h1>
+    <a href="{{ url_for('sales') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i>Back to Sales
+    </a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-shopping-cart me-2"></i>Sale Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="addSaleForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="product_id" class="form-label">
+                                <i class="fas fa-box me-1"></i>Product *
+                            </label>
+                            <select class="form-select" id="product_id" name="product_id" required>
+                                <option value="">Select a product</option>
+                                {% for product in products %}
+                                <option value="{{ product.id }}" 
+                                        data-price="{{ product.price }}" 
+                                        data-stock="{{ product.stock_quantity }}"
+                                        {% if request.args.get('product_id')|int == product.id %}selected{% endif %}>
+                                    {{ product.name }} - ₹{{ "%.2f"|format(product.price) }} ({{ product.stock_quantity }} in stock)
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">Choose the product being sold</div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="customer_name" class="form-label">
+                                <i class="fas fa-user me-1"></i>Customer Name
+                            </label>
+                            <input type="text" class="form-control" id="customer_name" name="customer_name" 
+                                   placeholder="Enter customer name (optional)">
+                            <div class="form-text">Optional: Leave blank for walk-in customers</div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="quantity" class="form-label">
+                                <i class="fas fa-hashtag me-1"></i>Quantity *
+                            </label>
+                            <input type="number" class="form-control" id="quantity" name="quantity" 
+                                   min="1" value="1" required placeholder="1">
+                            <div class="form-text">Number of units to sell</div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="unit_price" class="form-label">
+                                <i class="fas fa-dollar-sign me-1"></i>Unit Price
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text">₹</span>
+                                <input type="number" class="form-control" id="unit_price" 
+                                       step="0.01" min="0" name="unit_price" placeholder="0.00">
+                            </div>
+                            <div class="form-text">Price per unit (auto-filled)</div>
+                        </div>
+                    </div>
+
+                    <!-- Sale Summary -->
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title">
+                                        <i class="fas fa-calculator me-2"></i>Sale Summary
+                                    </h6>
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <small class="text-muted">Unit Price</small>
+                                            <div class="fw-bold" id="summaryUnitPrice">₹0.00</div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <small class="text-muted">Quantity</small>
+                                            <div class="fw-bold" id="summaryQuantity">0</div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <small class="text-muted">Total Amount</small>
+                                            <div class="fw-bold text-success" id="summaryTotal">₹0.00</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Stock Warning -->
+                    <div class="row mb-3" id="stockWarning" style="display: none;">
+                        <div class="col-12">
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Stock Warning:</strong> 
+                                <span id="stockWarningText"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('sales') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-1"></i>Cancel
+                        </a>
+                        <div>
+                            <button type="submit" class="btn btn-success me-2" id="submitBtn" name="action" value="record">
+                                <i class="fas fa-save me-1"></i>Record Sale
+                            </button>
+                            <button type="submit" class="btn btn-primary" name="action" value="print_record">
+                                <i class="fas fa-print me-1"></i>Print and Record Sale
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const productSelect = document.getElementById('product_id');
+    const quantityInput = document.getElementById('quantity');
+    const unitPriceInput = document.getElementById('unit_price');
+    const customerNameInput = document.getElementById('customer_name');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    // Summary elements
+    const summaryUnitPrice = document.getElementById('summaryUnitPrice');
+    const summaryQuantity = document.getElementById('summaryQuantity');
+    const summaryTotal = document.getElementById('summaryTotal');
+    
+    // Warning elements
+    const stockWarning = document.getElementById('stockWarning');
+    const stockWarningText = document.getElementById('stockWarningText');
+    
+    let lastProductId = null;
+    function updateSaleSummary() {
+        const selectedOption = productSelect.options[productSelect.selectedIndex];
+        const quantity = parseInt(quantityInput.value) || 0;
+        
+        if (selectedOption && selectedOption.value) {
+            const price = parseFloat(selectedOption.getAttribute('data-price'));
+            const stock = parseInt(selectedOption.getAttribute('data-stock'));
+            
+            // Auto-fill only if product changed or unit price is empty
+            if (lastProductId !== selectedOption.value) {
+                unitPriceInput.value = price.toFixed(2);
+                lastProductId = selectedOption.value;
+            }
+            const enteredPrice = parseFloat(unitPriceInput.value) || 0;
+            summaryUnitPrice.textContent = '₹' + enteredPrice.toFixed(2);
+            summaryQuantity.textContent = quantity;
+            summaryTotal.textContent = '₹' + (enteredPrice * quantity).toFixed(2);
+            
+            // Check stock levels
+            if (quantity > stock) {
+                stockWarning.style.display = 'block';
+                stockWarningText.textContent = `Requested quantity (${quantity}) exceeds available stock (${stock})`;
+                submitBtn.disabled = true;
+            } else if (stock <= 5) {
+                stockWarning.style.display = 'block';
+                stockWarningText.textContent = `Low stock warning: Only ${stock} units remaining`;
+                submitBtn.disabled = false;
+            } else {
+                stockWarning.style.display = 'none';
+                submitBtn.disabled = false;
+            }
+        } else {
+            unitPriceInput.value = '';
+            summaryUnitPrice.textContent = '₹0.00';
+            summaryQuantity.textContent = '0';
+            summaryTotal.textContent = '₹0.00';
+            stockWarning.style.display = 'none';
+            submitBtn.disabled = true;
+            lastProductId = null;
+        }
+    }
+    
+    productSelect.addEventListener('change', updateSaleSummary);
+    quantityInput.addEventListener('input', updateSaleSummary);
+    unitPriceInput.addEventListener('input', updateSaleSummary);
+    
+    // Initial calculation
+    updateSaleSummary();
+    
+    // Form validation
+    const form = document.getElementById('addSaleForm');
+    form.addEventListener('submit', function(e) {
+        const selectedOption = productSelect.options[productSelect.selectedIndex];
+        const quantity = parseInt(quantityInput.value);
+        const stock = parseInt(selectedOption.getAttribute('data-stock'));
+        
+        if (quantity > stock) {
+            e.preventDefault();
+            alert('Error: Requested quantity exceeds available stock!');
+        }
+    });
+});
+</script>
+{% endblock %} 

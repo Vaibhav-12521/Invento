@@ -1,0 +1,241 @@
+{% extends "base.html" %}
+
+{% block title %}Sales - Inventory Management System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">
+        <i class="fas fa-shopping-cart me-2"></i>Sales History
+    </h1>
+    <a href="{{ url_for('add_sale') }}" class="btn btn-success">
+        <i class="fas fa-plus me-1"></i>Record Sale
+    </a>
+</div>
+
+<!-- Sales Summary -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card metric-card success">
+            <div class="card-body text-center">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3 class="mb-0">{{ sales|length }}</h3>
+                        <p class="mb-0 opacity-75">Total Sales</p>
+                    </div>
+                    <div class="fs-1">
+                        <i class="fas fa-receipt"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card metric-card">
+            <div class="card-body text-center">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3 class="mb-0">₹{{ "%.2f"|format(sales|sum(attribute='total_amount')) }}</h3>
+                        <p class="mb-0 opacity-75">Total Revenue</p>
+                    </div>
+                    <div class="fs-1">
+                        <i class="fas fa-dollar-sign"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card metric-card">
+            <div class="card-body text-center">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3 class="mb-0">{{ sales|sum(attribute='quantity') }}</h3>
+                        <p class="mb-0 opacity-75">Units Sold</p>
+                    </div>
+                    <div class="fs-1">
+                        <i class="fas fa-box"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card metric-card">
+            <div class="card-body text-center">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3 class="mb-0">₹{{ "%.2f"|format((sales|sum(attribute='total_amount')) / (sales|length) if sales|length > 0 else 0) }}</h3>
+                        <p class="mb-0 opacity-75">Avg. Sale</p>
+                    </div>
+                    <div class="fs-1">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sales Table -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+            <i class="fas fa-list me-2"></i>Sales Transactions
+        </h5>
+        <span class="badge bg-success">{{ sales|length }} Transactions</span>
+    </div>
+    <div class="card-body">
+        {% if sales %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Date & Time</th>
+                            <th>Product</th>
+                            <th>Customer</th>
+                            <th>Quantity</th>
+                            <th>Unit Price</th>
+                            <th>Total Amount</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for sale in sales %}
+                        <tr>
+                            <td>
+                                <div>
+                                    <strong>{{ sale.sale_date.strftime('%Y-%m-%d') }}</strong>
+                                    <br><small class="text-muted">{{ sale.sale_date.strftime('%H:%M') }}</small>
+                                </div>
+                            </td>
+                            <td>
+                                <div>
+                                    <strong>{{ sale.product.name }}</strong>
+                                    {% if sale.product.category %}
+                                        <br><small class="text-muted">{{ sale.product.category }}</small>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                {% if sale.customer_name %}
+                                    <span class="badge bg-info">{{ sale.customer_name }}</span>
+                                {% else %}
+                                    <span class="text-muted">Walk-in Customer</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-primary">{{ sale.quantity }}</span>
+                            </td>
+                            <td>₹{{ "%.2f"|format(sale.product.price) }}</td>
+                            <td>
+                                <strong>₹{{ "%.2f"|format(sale.total_amount) }}</strong>
+                            </td>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-outline-info" 
+                                        data-sale-id="{{ sale.id }}" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center text-muted py-5">
+                <i class="fas fa-shopping-cart fs-1 mb-3"></i>
+                <h5>No Sales Recorded</h5>
+                <p class="mb-3">Start tracking your sales by recording your first transaction.</p>
+                <a href="{{ url_for('add_sale') }}" class="btn btn-success">
+                    <i class="fas fa-plus me-1"></i>Record Your First Sale
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Sale Details Modal -->
+<div class="modal fade" id="saleDetailsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Sale Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="saleDetailsContent">
+                <!-- Content will be loaded dynamically -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="printSaleDetailsBtn" style="display:none;">
+                    <i class="fas fa-print me-1"></i>Print
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function showSaleDetails(saleId) {
+    // Fetch sale details via AJAX
+    fetch(`/api/sale/${saleId}`)
+        .then(response => response.json())
+        .then(data => {
+            const html = `
+                <div id="printableSaleDetails">
+                    <h5>Sale #${data.id}</h5>
+                    <p><strong>Date:</strong> ${data.sale_date}</p>
+                    <p><strong>Customer:</strong> ${data.customer_name || 'Walk-in'}</p>
+                    <hr>
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Unit Price</th>
+                                <th>Quantity</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>${data.product_name}</td>
+                                <td>₹${data.unit_price.toFixed(2)}</td>
+                                <td>${data.quantity}</td>
+                                <td>₹${data.total_amount.toFixed(2)}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            document.getElementById('saleDetailsContent').innerHTML = html;
+            document.getElementById('printSaleDetailsBtn').style.display = '';
+        });
+    const modal = new bootstrap.Modal(document.getElementById('saleDetailsModal'));
+    modal.show();
+}
+document.addEventListener('DOMContentLoaded', function() {
+    const detailButtons = document.querySelectorAll('[data-sale-id]');
+    detailButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const saleId = this.getAttribute('data-sale-id');
+            showSaleDetails(saleId);
+        });
+    });
+    document.getElementById('printSaleDetailsBtn').addEventListener('click', function() {
+        const printContents = document.getElementById('printableSaleDetails').innerHTML;
+        const printWindow = window.open('', '', 'height=600,width=800');
+        printWindow.document.write('<html><head><title>Print Sale Details</title>');
+        printWindow.document.write('</head><body >');
+        printWindow.document.write(printContents);
+        printWindow.document.write('</body></html>');
+        printWindow.document.close();
+        printWindow.print();
+    });
+});
+</script>
+{% endblock %} 
